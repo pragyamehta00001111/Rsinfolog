@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Job Contract & Petrol Tracker</title>
+  <title>Job Contract & Petrol Tracker (INR)</title>
   <style>
     :root {
       --bg-color: #f4f6f9;
@@ -13,6 +13,7 @@
       --text: #1f2937;
       --border: #e5e7eb;
       --success: #16a34a;
+      --success-hover: #15803d;
     }
 
     body {
@@ -106,6 +107,32 @@
       color: var(--text);
     }
 
+    /* Action bar for exports */
+    .action-bar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 16px;
+    }
+
+    button.btn-export {
+      background-color: var(--success);
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+
+    button.btn-export:hover {
+      background-color: var(--success-hover);
+    }
+
     /* Form Styles */
     .form-card {
       background: var(--card-bg);
@@ -186,19 +213,8 @@
       border-bottom: none;
     }
 
-    .badge {
-      display: inline-block;
-      padding: 4px 8px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    .badge-paid { background-color: #dcfce7; color: #15803d; }
-    .badge-pending { background-color: #fef3c7; color: #b45309; }
-
     .input-table {
-      width: 100px;
+      width: 120px;
       padding: 6px;
     }
 
@@ -216,10 +232,10 @@
   <div class="container">
     <header>
       <h1>2-Year Job Contract & Allowance Tracker</h1>
-      <p class="subtitle">Contract Period: July 09, 2026 – July 08, 2028</p>
+      <p class="subtitle">Contract Period: July 09, 2026 – July 08, 2028 (Currency: ₹ INR)</p>
     </header>
 
-    <!-- Navigation -->
+    <!-- Navigation Tabs -->
     <div class="nav-tabs">
       <button class="tab-btn active" onclick="switchTab('salary-tab')">Salary & Contract Dashboard</button>
       <button class="tab-btn" onclick="switchTab('petrol-tab')">Petrol Money Tracker</button>
@@ -230,20 +246,24 @@
       <div class="metrics-grid">
         <div class="metric-card">
           <span>Total Earned / Entered</span>
-          <h2 id="total-salary-val">$0.00</h2>
+          <h2 id="total-salary-val">₹0.00</h2>
         </div>
         <div class="metric-card">
           <span>Total Paid</span>
-          <h2 id="paid-salary-val">$0.00</h2>
+          <h2 id="paid-salary-val">₹0.00</h2>
         </div>
         <div class="metric-card">
           <span>Pending Salary</span>
-          <h2 id="pending-salary-val">$0.00</h2>
+          <h2 id="pending-salary-val">₹0.00</h2>
         </div>
         <div class="metric-card">
           <span>Contract Progress</span>
           <h2 id="paid-count-val">0 / 24 Months</h2>
         </div>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn-export" onclick="exportSalaryCSV()">📥 Export Salary CSV</button>
       </div>
 
       <div class="table-container">
@@ -252,12 +272,12 @@
             <tr>
               <th>Month #</th>
               <th>Period Range</th>
-              <th>Salary Amount</th>
+              <th>Salary Amount (₹)</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody id="salary-table-body">
-            <!-- JavaScript renders 24 months here dynamically -->
+            <!-- Dynamically populated 24 months -->
           </tbody>
         </table>
       </div>
@@ -272,7 +292,7 @@
         </div>
         <div class="metric-card">
           <span>Total Petrol Money (x2.6)</span>
-          <h2 id="total-petrol-val">$0.00</h2>
+          <h2 id="total-petrol-val">₹0.00</h2>
         </div>
       </div>
 
@@ -295,6 +315,10 @@
         </form>
       </div>
 
+      <div class="action-bar">
+        <button class="btn-export" onclick="exportPetrolCSV()">📥 Export Petrol CSV</button>
+      </div>
+
       <div class="table-container">
         <table>
           <thead>
@@ -304,7 +328,7 @@
               <th>End Odo</th>
               <th>Total KM</th>
               <th>Multiplier</th>
-              <th>Total Petrol Money</th>
+              <th>Total Petrol Money (₹)</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -317,6 +341,14 @@
   </div>
 
   <script>
+    // Format helpers for Indian Rupee
+    function formatINR(val) {
+      return '₹' + Number(val).toLocaleString('en-IN', {
+        maximumFractionDigits: 2,
+        minimumFractionDigits: 2
+      });
+    }
+
     // Tab Switcher
     function switchTab(tabId) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -326,19 +358,18 @@
       event.currentTarget.classList.add('active');
     }
 
-    // Default salary structure (2 Years starting July 9, 2026)
-    const startDate = new Date(2026, 6, 9); // July 9, 2026
-    let salaryData = JSON.parse(localStorage.getItem('contract_salaries')) || null;
+    // Default salary structure (2 Years starting July 09, 2026)
+    let salaryData = JSON.parse(localStorage.getItem('contract_salaries_inr')) || null;
 
     if (!salaryData) {
       salaryData = [];
       for (let i = 0; i < 24; i++) {
-        let periodStart = new Date(2026, 6 + i, 9);
+        let periodStart = new Date(2026, 6 + i, 9); // July = month index 6
         let periodEnd = new Date(2026, 7 + i, 8);
         
-        let monthLabel = periodStart.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) + 
+        let monthLabel = periodStart.toLocaleDateString('en-IN', { month: 'short', day: '2-digit', year: 'numeric' }) + 
                          ' - ' + 
-                         periodEnd.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+                         periodEnd.toLocaleDateString('en-IN', { month: 'short', day: '2-digit', year: 'numeric' });
         
         let defaultAmount = 0;
         if (i === 0) defaultAmount = 4957;
@@ -355,7 +386,7 @@
     }
 
     function saveSalaryData() {
-      localStorage.setItem('contract_salaries', JSON.stringify(salaryData));
+      localStorage.setItem('contract_salaries_inr', JSON.stringify(salaryData));
       renderSalaryTable();
     }
 
@@ -400,18 +431,18 @@
         tbody.appendChild(tr);
       });
 
-      // Update Dashboard Metrics
-      document.getElementById('total-salary-val').innerText = `$${totalEarned.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-      document.getElementById('paid-salary-val').innerText = `$${totalPaid.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-      document.getElementById('pending-salary-val').innerText = `$${pendingPaid.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+      // Update Dashboard Metrics in INR
+      document.getElementById('total-salary-val').innerText = formatINR(totalEarned);
+      document.getElementById('paid-salary-val').innerText = formatINR(totalPaid);
+      document.getElementById('pending-salary-val').innerText = formatINR(pendingPaid);
       document.getElementById('paid-count-val').innerText = `${paidCount} / 24 Months`;
     }
 
-    // Petrol Money Logic
-    let petrolData = JSON.parse(localStorage.getItem('petrol_records')) || [];
+    // Petrol Allowance Logic
+    let petrolData = JSON.parse(localStorage.getItem('petrol_records_inr')) || [];
 
     function savePetrolData() {
-      localStorage.setItem('petrol_records', JSON.stringify(petrolData));
+      localStorage.setItem('petrol_records_inr', JSON.stringify(petrolData));
       renderPetrolTable();
     }
 
@@ -458,17 +489,51 @@
           <td>${item.end} km</td>
           <td><strong>${item.totalKm.toFixed(1)} km</strong></td>
           <td>2.6</td>
-          <td><strong>$${item.totalCost.toFixed(2)}</strong></td>
+          <td><strong>${formatINR(item.totalCost)}</strong></td>
           <td><button class="btn-delete" onclick="deletePetrolRow(${index})">Delete</button></td>
         `;
         tbody.appendChild(tr);
       });
 
       document.getElementById('total-km-val').innerText = `${overallKm.toFixed(1)} km`;
-      document.getElementById('total-petrol-val').innerText = `$${overallCost.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+      document.getElementById('total-petrol-val').innerText = formatINR(overallCost);
     }
 
-    // Initial Load
+    // CSV Helper Function
+    function downloadCSV(csvContent, fileName) {
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Export Salary CSV
+    function exportSalaryCSV() {
+      let csv = 'Month Number,Period Range,Salary Amount (INR),Status\n';
+      salaryData.forEach(row => {
+        csv += `"Month ${row.month}","${row.period}",${row.amount},"${row.status}"\n`;
+      });
+      downloadCSV(csv, 'job_contract_salary_tracker.csv');
+    }
+
+    // Export Petrol CSV
+    function exportPetrolCSV() {
+      if (petrolData.length === 0) {
+        alert('No petrol records available to export.');
+        return;
+      }
+      let csv = 'Period,Start Odometer (km),End Odometer (km),Total Distance (km),Rate Multiplier,Total Petrol Money (INR)\n';
+      petrolData.forEach(row => {
+        csv += `"${row.period}",${row.start},${row.end},${row.totalKm.toFixed(1)},2.6,${row.totalCost.toFixed(2)}\n`;
+      });
+      downloadCSV(csv, 'petrol_reimbursement_tracker.csv');
+    }
+
+    // Initial load
     renderSalaryTable();
     renderPetrolTable();
   </script>
