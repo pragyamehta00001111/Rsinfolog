@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Contract & Petrol Tracker</title>
+  <style>
+    :root {
+      --bg-color: #f4f6f9;
+      --card-bg: #ffffff;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --text: #1f2937;
+      --border: #e5e7eb;
+      --success: #16a34a;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text);
+      margin: 0;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: 28px;
+    }
+
+    p.subtitle {
+      margin: 0;
+      color: #6b7280;
+    }
+
+    /* Navigation Tabs */
+    .nav-tabs {
+      display: flex;
+      gap: 12px;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 24px;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 12px 20px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #6b7280;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Dashboard Summary Cards */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .metric-card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      border: 1px solid var(--border);
+    }
+
+    .metric-card span {
+      font-size: 13px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    .metric-card h2 {
+      margin: 8px 0 0 0;
+      font-size: 24px;
+      color: var(--text);
+    }
+
+    /* Form Styles */
+    .form-card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      align-items: end;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    input, select {
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    button.btn-add {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button.btn-add:hover {
+      background-color: var(--primary-hover);
+    }
+
+    /* Tables */
+    .table-container {
+      background: var(--card-bg);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow-x: auto;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    th {
+      background-color: #f9fafb;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-paid { background-color: #dcfce7; color: #15803d; }
+    .badge-pending { background-color: #fef3c7; color: #b45309; }
+
+    .input-table {
+      width: 100px;
+      padding: 6px;
+    }
+
+    .btn-delete {
+      background: none;
+      border: none;
+      color: #ef4444;
+      cursor: pointer;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>2-Year Job Contract & Allowance Tracker</h1>
+      <p class="subtitle">Contract Period: July 09, 2026 – July 08, 2028</p>
+    </header>
+
+    <!-- Navigation -->
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('salary-tab')">Salary & Contract Dashboard</button>
+      <button class="tab-btn" onclick="switchTab('petrol-tab')">Petrol Money Tracker</button>
+    </div>
+
+    <!-- TAB 1: SALARY & CONTRACT DASHBOARD -->
+    <div id="salary-tab" class="tab-content active">
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <span>Total Earned / Entered</span>
+          <h2 id="total-salary-val">$0.00</h2>
+        </div>
+        <div class="metric-card">
+          <span>Total Paid</span>
+          <h2 id="paid-salary-val">$0.00</h2>
+        </div>
+        <div class="metric-card">
+          <span>Pending Salary</span>
+          <h2 id="pending-salary-val">$0.00</h2>
+        </div>
+        <div class="metric-card">
+          <span>Contract Progress</span>
+          <h2 id="paid-count-val">0 / 24 Months</h2>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Month #</th>
+              <th>Period Range</th>
+              <th>Salary Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="salary-table-body">
+            <!-- JavaScript renders 24 months here dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2: PETROL MONEY TRACKER -->
+    <div id="petrol-tab" class="tab-content">
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <span>Total Distance Driven</span>
+          <h2 id="total-km-val">0 km</h2>
+        </div>
+        <div class="metric-card">
+          <span>Total Petrol Money (x2.6)</span>
+          <h2 id="total-petrol-val">$0.00</h2>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <h3>Add 15-Day Petrol Record</h3>
+        <form id="petrol-form" class="form-grid" onsubmit="addPetrolRow(event)">
+          <div class="form-group">
+            <label>Period / Dates</label>
+            <input type="text" id="p-period" placeholder="e.g., Jul 09 - Jul 23" required>
+          </div>
+          <div class="form-group">
+            <label>Start Odometer Reading</label>
+            <input type="number" step="0.1" id="p-start" placeholder="e.g., 12000" required>
+          </div>
+          <div class="form-group">
+            <label>End Odometer Reading</label>
+            <input type="number" step="0.1" id="p-end" placeholder="e.g., 12450" required>
+          </div>
+          <button type="submit" class="btn-add">Add Entry</button>
+        </form>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Period</th>
+              <th>Start Odo</th>
+              <th>End Odo</th>
+              <th>Total KM</th>
+              <th>Multiplier</th>
+              <th>Total Petrol Money</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="petrol-table-body">
+            <!-- Dynamic petrol rows -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Tab Switcher
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      
+      document.getElementById(tabId).classList.add('active');
+      event.currentTarget.classList.add('active');
+    }
+
+    // Default salary structure (2 Years starting July 9, 2026)
+    const startDate = new Date(2026, 6, 9); // July 9, 2026
+    let salaryData = JSON.parse(localStorage.getItem('contract_salaries')) || null;
+
+    if (!salaryData) {
+      salaryData = [];
+      for (let i = 0; i < 24; i++) {
+        let periodStart = new Date(2026, 6 + i, 9);
+        let periodEnd = new Date(2026, 7 + i, 8);
+        
+        let monthLabel = periodStart.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) + 
+                         ' - ' + 
+                         periodEnd.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        
+        let defaultAmount = 0;
+        if (i === 0) defaultAmount = 4957;
+        if (i === 1) defaultAmount = 8000;
+
+        salaryData.push({
+          month: i + 1,
+          period: monthLabel,
+          amount: defaultAmount,
+          status: 'Pending'
+        });
+      }
+      saveSalaryData();
+    }
+
+    function saveSalaryData() {
+      localStorage.setItem('contract_salaries', JSON.stringify(salaryData));
+      renderSalaryTable();
+    }
+
+    function updateSalary(index, field, value) {
+      if (field === 'amount') salaryData[index].amount = parseFloat(value) || 0;
+      if (field === 'status') salaryData[index].status = value;
+      saveSalaryData();
+    }
+
+    function renderSalaryTable() {
+      const tbody = document.getElementById('salary-table-body');
+      tbody.innerHTML = '';
+
+      let totalEarned = 0;
+      let totalPaid = 0;
+      let pendingPaid = 0;
+      let paidCount = 0;
+
+      salaryData.forEach((item, index) => {
+        totalEarned += item.amount;
+        if (item.status === 'Paid') {
+          totalPaid += item.amount;
+          paidCount++;
+        } else {
+          pendingPaid += item.amount;
+        }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>Month ${item.month}</strong></td>
+          <td>${item.period}</td>
+          <td>
+            <input type="number" class="input-table" value="${item.amount}" onchange="updateSalary(${index}, 'amount', this.value)" />
+          </td>
+          <td>
+            <select onchange="updateSalary(${index}, 'status', this.value)">
+              <option value="Pending" ${item.status === 'Pending' ? 'selected' : ''}>Pending</option>
+              <option value="Paid" ${item.status === 'Paid' ? 'selected' : ''}>Paid</option>
+            </select>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Update Dashboard Metrics
+      document.getElementById('total-salary-val').innerText = `$${totalEarned.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+      document.getElementById('paid-salary-val').innerText = `$${totalPaid.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+      document.getElementById('pending-salary-val').innerText = `$${pendingPaid.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+      document.getElementById('paid-count-val').innerText = `${paidCount} / 24 Months`;
+    }
+
+    // Petrol Money Logic
+    let petrolData = JSON.parse(localStorage.getItem('petrol_records')) || [];
+
+    function savePetrolData() {
+      localStorage.setItem('petrol_records', JSON.stringify(petrolData));
+      renderPetrolTable();
+    }
+
+    function addPetrolRow(e) {
+      e.preventDefault();
+      const period = document.getElementById('p-period').value;
+      const start = parseFloat(document.getElementById('p-start').value);
+      const end = parseFloat(document.getElementById('p-end').value);
+
+      if (end < start) {
+        alert("End Odometer reading cannot be lower than Start Odometer reading.");
+        return;
+      }
+
+      const totalKm = end - start;
+      const totalCost = totalKm * 2.6;
+
+      petrolData.push({ period, start, end, totalKm, totalCost });
+      savePetrolData();
+
+      document.getElementById('petrol-form').reset();
+    }
+
+    function deletePetrolRow(index) {
+      petrolData.splice(index, 1);
+      savePetrolData();
+    }
+
+    function renderPetrolTable() {
+      const tbody = document.getElementById('petrol-table-body');
+      tbody.innerHTML = '';
+
+      let overallKm = 0;
+      let overallCost = 0;
+
+      petrolData.forEach((item, index) => {
+        overallKm += item.totalKm;
+        overallCost += item.totalCost;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.period}</td>
+          <td>${item.start} km</td>
+          <td>${item.end} km</td>
+          <td><strong>${item.totalKm.toFixed(1)} km</strong></td>
+          <td>2.6</td>
+          <td><strong>$${item.totalCost.toFixed(2)}</strong></td>
+          <td><button class="btn-delete" onclick="deletePetrolRow(${index})">Delete</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('total-km-val').innerText = `${overallKm.toFixed(1)} km`;
+      document.getElementById('total-petrol-val').innerText = `$${overallCost.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+    }
+
+    // Initial Load
+    renderSalaryTable();
+    renderPetrolTable();
+  </script>
+</body>
+</html>
