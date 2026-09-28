@@ -14,6 +14,8 @@
       --border: #e5e7eb;
       --success: #16a34a;
       --success-hover: #15803d;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
     }
 
     body {
@@ -107,10 +109,11 @@
       color: var(--text);
     }
 
-    /* Action bar for exports */
+    /* Action bar for exports and reset */
     .action-bar {
       display: flex;
       justify-content: flex-end;
+      gap: 12px;
       margin-bottom: 16px;
     }
 
@@ -123,14 +126,28 @@
       font-weight: 600;
       font-size: 14px;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
       transition: background 0.2s;
     }
 
     button.btn-export:hover {
       background-color: var(--success-hover);
+    }
+
+    button.btn-reset {
+      background-color: #f3f4f6;
+      color: #4b5563;
+      border: 1px solid var(--border);
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    button.btn-reset:hover {
+      background-color: #e5e7eb;
+      color: var(--danger);
     }
 
     /* Form Styles */
@@ -221,7 +238,7 @@
     .btn-delete {
       background: none;
       border: none;
-      color: #ef4444;
+      color: var(--danger);
       cursor: pointer;
       font-weight: 600;
     }
@@ -237,8 +254,8 @@
 
     <!-- Navigation Tabs -->
     <div class="nav-tabs">
-      <button class="tab-btn active" onclick="switchTab('salary-tab')">Salary & Contract Dashboard</button>
-      <button class="tab-btn" onclick="switchTab('petrol-tab')">Petrol Money Tracker</button>
+      <button class="tab-btn active" id="btn-tab-salary">Salary & Contract Dashboard</button>
+      <button class="tab-btn" id="btn-tab-petrol">Petrol Money Tracker</button>
     </div>
 
     <!-- TAB 1: SALARY & CONTRACT DASHBOARD -->
@@ -263,7 +280,8 @@
       </div>
 
       <div class="action-bar">
-        <button class="btn-export" onclick="exportSalaryCSV()">📥 Export Salary CSV</button>
+        <button class="btn-reset" id="reset-salary-btn">🔄 Reset Salary Data</button>
+        <button class="btn-export" id="export-salary-btn">📥 Export Salary CSV</button>
       </div>
 
       <div class="table-container">
@@ -298,7 +316,7 @@
 
       <div class="form-card">
         <h3>Add 15-Day Petrol Record</h3>
-        <form id="petrol-form" class="form-grid" onsubmit="addPetrolRow(event)">
+        <form id="petrol-form" class="form-grid">
           <div class="form-group">
             <label>Period / Dates</label>
             <input type="text" id="p-period" placeholder="e.g., Jul 09 - Jul 23" required>
@@ -316,7 +334,8 @@
       </div>
 
       <div class="action-bar">
-        <button class="btn-export" onclick="exportPetrolCSV()">📥 Export Petrol CSV</button>
+        <button class="btn-reset" id="reset-petrol-btn">🔄 Clear Petrol Logs</button>
+        <button class="btn-export" id="export-petrol-btn">📥 Export Petrol CSV</button>
       </div>
 
       <div class="table-container">
@@ -341,30 +360,56 @@
   </div>
 
   <script>
-    // Format helpers for Indian Rupee
+    // Storage Keys
+    const SALARY_KEY = 'gh_job_contract_salary_v2';
+    const PETROL_KEY = 'gh_job_contract_petrol_v2';
+
+    // Safe Storage Wrapper
+    function getStorage(key) {
+      try {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : null;
+      } catch (e) {
+        console.error("LocalStorage access restricted:", e);
+        return null;
+      }
+    }
+
+    function setStorage(key, val) {
+      try {
+        localStorage.setItem(key, JSON.stringify(val));
+      } catch (e) {
+        console.error("LocalStorage write failed:", e);
+      }
+    }
+
+    // INR Currency Formatting
     function formatINR(val) {
-      return '₹' + Number(val).toLocaleString('en-IN', {
+      return '₹' + Number(val || 0).toLocaleString('en-IN', {
         maximumFractionDigits: 2,
         minimumFractionDigits: 2
       });
     }
 
-    // Tab Switcher
-    function switchTab(tabId) {
+    // Tab Navigation
+    function switchTab(tabId, targetBtn) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
       
       document.getElementById(tabId).classList.add('active');
-      event.currentTarget.classList.add('active');
+      targetBtn.classList.add('active');
     }
 
-    // Default salary structure (2 Years starting July 09, 2026)
-    let salaryData = JSON.parse(localStorage.getItem('contract_salaries_inr')) || null;
+    document.getElementById('btn-tab-salary').addEventListener('click', (e) => switchTab('salary-tab', e.target));
+    document.getElementById('btn-tab-petrol').addEventListener('click', (e) => switchTab('petrol-tab', e.target));
 
-    if (!salaryData) {
-      salaryData = [];
+    // Initial Salary Data Setup
+    let salaryData = getStorage(SALARY_KEY);
+
+    function createDefaultSalaryData() {
+      const data = [];
       for (let i = 0; i < 24; i++) {
-        let periodStart = new Date(2026, 6 + i, 9); // July = month index 6
+        let periodStart = new Date(2026, 6 + i, 9);
         let periodEnd = new Date(2026, 7 + i, 8);
         
         let monthLabel = periodStart.toLocaleDateString('en-IN', { month: 'short', day: '2-digit', year: 'numeric' }) + 
@@ -375,25 +420,24 @@
         if (i === 0) defaultAmount = 4957;
         if (i === 1) defaultAmount = 8000;
 
-        salaryData.push({
+        data.push({
           month: i + 1,
           period: monthLabel,
           amount: defaultAmount,
           status: 'Pending'
         });
       }
-      saveSalaryData();
+      return data;
     }
 
-    function saveSalaryData() {
-      localStorage.setItem('contract_salaries_inr', JSON.stringify(salaryData));
+    if (!salaryData || salaryData.length !== 24) {
+      salaryData = createDefaultSalaryData();
+      setStorage(SALARY_KEY, salaryData);
+    }
+
+    function saveAndRenderSalary() {
+      setStorage(SALARY_KEY, salaryData);
       renderSalaryTable();
-    }
-
-    function updateSalary(index, field, value) {
-      if (field === 'amount') salaryData[index].amount = parseFloat(value) || 0;
-      if (field === 'status') salaryData[index].status = value;
-      saveSalaryData();
     }
 
     function renderSalaryTable() {
@@ -406,47 +450,68 @@
       let paidCount = 0;
 
       salaryData.forEach((item, index) => {
-        totalEarned += item.amount;
+        totalEarned += Number(item.amount) || 0;
         if (item.status === 'Paid') {
-          totalPaid += item.amount;
+          totalPaid += Number(item.amount) || 0;
           paidCount++;
         } else {
-          pendingPaid += item.amount;
+          pendingPaid += Number(item.amount) || 0;
         }
 
         const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong>Month ${item.month}</strong></td>
-          <td>${item.period}</td>
-          <td>
-            <input type="number" class="input-table" value="${item.amount}" onchange="updateSalary(${index}, 'amount', this.value)" />
-          </td>
-          <td>
-            <select onchange="updateSalary(${index}, 'status', this.value)">
-              <option value="Pending" ${item.status === 'Pending' ? 'selected' : ''}>Pending</option>
-              <option value="Paid" ${item.status === 'Paid' ? 'selected' : ''}>Paid</option>
-            </select>
-          </td>
+        
+        const tdMonth = document.createElement('td');
+        tdMonth.innerHTML = `<strong>Month ${item.month}</strong>`;
+        
+        const tdPeriod = document.createElement('td');
+        tdPeriod.textContent = item.period;
+
+        const tdAmount = document.createElement('td');
+        const inputAmount = document.createElement('input');
+        inputAmount.type = 'number';
+        inputAmount.className = 'input-table';
+        inputAmount.value = item.amount;
+        inputAmount.addEventListener('input', (e) => {
+          salaryData[index].amount = parseFloat(e.target.value) || 0;
+          saveAndRenderSalary();
+        });
+        tdAmount.appendChild(inputAmount);
+
+        const tdStatus = document.createElement('td');
+        const selectStatus = document.createElement('select');
+        selectStatus.innerHTML = `
+          <option value="Pending" ${item.status === 'Pending' ? 'selected' : ''}>Pending</option>
+          <option value="Paid" ${item.status === 'Paid' ? 'selected' : ''}>Paid</option>
         `;
+        selectStatus.addEventListener('change', (e) => {
+          salaryData[index].status = e.target.value;
+          saveAndRenderSalary();
+        });
+        tdStatus.appendChild(selectStatus);
+
+        tr.appendChild(tdMonth);
+        tr.appendChild(tdPeriod);
+        tr.appendChild(tdAmount);
+        tr.appendChild(tdStatus);
+
         tbody.appendChild(tr);
       });
 
-      // Update Dashboard Metrics in INR
       document.getElementById('total-salary-val').innerText = formatINR(totalEarned);
       document.getElementById('paid-salary-val').innerText = formatINR(totalPaid);
       document.getElementById('pending-salary-val').innerText = formatINR(pendingPaid);
       document.getElementById('paid-count-val').innerText = `${paidCount} / 24 Months`;
     }
 
-    // Petrol Allowance Logic
-    let petrolData = JSON.parse(localStorage.getItem('petrol_records_inr')) || [];
+    // Petrol Data Logic
+    let petrolData = getStorage(PETROL_KEY) || [];
 
-    function savePetrolData() {
-      localStorage.setItem('petrol_records_inr', JSON.stringify(petrolData));
+    function saveAndRenderPetrol() {
+      setStorage(PETROL_KEY, petrolData);
       renderPetrolTable();
     }
 
-    function addPetrolRow(e) {
+    document.getElementById('petrol-form').addEventListener('submit', (e) => {
       e.preventDefault();
       const period = document.getElementById('p-period').value;
       const start = parseFloat(document.getElementById('p-start').value);
@@ -461,14 +526,14 @@
       const totalCost = totalKm * 2.6;
 
       petrolData.push({ period, start, end, totalKm, totalCost });
-      savePetrolData();
+      saveAndRenderPetrol();
 
       document.getElementById('petrol-form').reset();
-    }
+    });
 
     function deletePetrolRow(index) {
       petrolData.splice(index, 1);
-      savePetrolData();
+      saveAndRenderPetrol();
     }
 
     function renderPetrolTable() {
@@ -490,16 +555,23 @@
           <td><strong>${item.totalKm.toFixed(1)} km</strong></td>
           <td>2.6</td>
           <td><strong>${formatINR(item.totalCost)}</strong></td>
-          <td><button class="btn-delete" onclick="deletePetrolRow(${index})">Delete</button></td>
+          <td><button class="btn-delete" data-index="${index}">Delete</button></td>
         `;
         tbody.appendChild(tr);
+      });
+
+      tbody.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = parseInt(e.target.getAttribute('data-index'));
+          deletePetrolRow(idx);
+        });
       });
 
       document.getElementById('total-km-val').innerText = `${overallKm.toFixed(1)} km`;
       document.getElementById('total-petrol-val').innerText = formatINR(overallCost);
     }
 
-    // CSV Helper Function
+    // CSV Exports
     function downloadCSV(csvContent, fileName) {
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -511,17 +583,15 @@
       document.body.removeChild(link);
     }
 
-    // Export Salary CSV
-    function exportSalaryCSV() {
+    document.getElementById('export-salary-btn').addEventListener('click', () => {
       let csv = 'Month Number,Period Range,Salary Amount (INR),Status\n';
       salaryData.forEach(row => {
         csv += `"Month ${row.month}","${row.period}",${row.amount},"${row.status}"\n`;
       });
       downloadCSV(csv, 'job_contract_salary_tracker.csv');
-    }
+    });
 
-    // Export Petrol CSV
-    function exportPetrolCSV() {
+    document.getElementById('export-petrol-btn').addEventListener('click', () => {
       if (petrolData.length === 0) {
         alert('No petrol records available to export.');
         return;
@@ -531,9 +601,24 @@
         csv += `"${row.period}",${row.start},${row.end},${row.totalKm.toFixed(1)},2.6,${row.totalCost.toFixed(2)}\n`;
       });
       downloadCSV(csv, 'petrol_reimbursement_tracker.csv');
-    }
+    });
 
-    // Initial load
+    // Reset Controls
+    document.getElementById('reset-salary-btn').addEventListener('click', () => {
+      if (confirm('Are you sure you want to reset all salary data back to defaults?')) {
+        salaryData = createDefaultSalaryData();
+        saveAndRenderSalary();
+      }
+    });
+
+    document.getElementById('reset-petrol-btn').addEventListener('click', () => {
+      if (confirm('Are you sure you want to delete all petrol records?')) {
+        petrolData = [];
+        saveAndRenderPetrol();
+      }
+    });
+
+    // Initial render call
     renderSalaryTable();
     renderPetrolTable();
   </script>
